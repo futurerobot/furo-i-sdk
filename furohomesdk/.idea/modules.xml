@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
+      <module fileurl="file://$PROJECT_DIR$/furohomelib/furohomelib.iml" filepath="$PROJECT_DIR$/furohomelib/furohomelib.iml" />
+      <module fileurl="file://$PROJECT_DIR$/furohomesdk.iml" filepath="$PROJECT_DIR$/furohomesdk.iml" />
+    </modules>
+  </component>
+</project>
+
