@@ -174,6 +174,11 @@ public class MainActivity extends ActionBarActivity {
             }
 
             @Override
+            public void onBottomSensorChanged(String values) {
+                Log.v("onBottomSensorChanged", values);
+            }
+
+            @Override
             public void onTemperatureChanged(final String values) {
                 Log.v("onTemperatureChanged", values);
                 MainActivity.this.runOnUiThread(new Runnable() {

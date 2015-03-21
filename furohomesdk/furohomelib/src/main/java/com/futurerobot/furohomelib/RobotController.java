@@ -20,6 +20,7 @@ public class RobotController {
         public void onBuildDateChanged(java.lang.String values);
         public void onSerialNumberChanged(java.lang.String values);
         public void onRobotStatusChanged(java.lang.String values);
+        public void onBottomSensorChanged(java.lang.String values);
         public void onTemperatureChanged(java.lang.String values);
         public void onHumidityChanged(java.lang.String values);
         public void onBatteryPercentChanged(java.lang.String values);
@@ -62,6 +63,8 @@ public class RobotController {
     private static final byte TYPE_ACC = 0x68;
 
     private static final int testVariable = 0x41c73333;
+
+    private static final int ONE_SECOND = 10;
 
     private RobotController() {
 
@@ -277,11 +280,23 @@ public class RobotController {
         distance = byte4ToInt(packetParseBuffer.data);
         // 0 번 ~ 9번까지.. 시계 방향 0번이 왼쪽 바퀴
         // distance in cm(centi meter)
-        strPsdBuilder.append(sid)
-                .append(',')
-                .append(distance);
+        strPsdBuilder.append("PSD[")
+                .append(sid)
+                .append(']')
+                .append('[')
+                .append(distance)
+                .append(']');
 
         mEventListener.onDistanceSensorChanged(strPsdBuilder.toString());
+    }
+
+    private void bottomSensorChanged() {
+        int bottomSensor;
+
+        StringBuilder strPsdBuilder = new StringBuilder();
+        bottomSensor = byte4ToInt(packetParseBuffer.data);
+        strPsdBuilder.append("bottom Sensor : ").append(bottomSensor);
+        mEventListener.onBottomSensorChanged(strPsdBuilder.toString());
     }
 
     private void temperatureChanged() {
@@ -293,7 +308,7 @@ public class RobotController {
         temp = byte4ToInt(packetParseBuffer.data);
 
         //temperature = Float.intBitsToFloat(temp);
-        strPsdBuilder.append(temp);
+        strPsdBuilder.append("Temperature : ").append(temp);
 
         mEventListener.onTemperatureChanged(strPsdBuilder.toString());
     }
@@ -307,7 +322,7 @@ public class RobotController {
         temp = byte4ToInt(packetParseBuffer.data);
 
         //humidity = Float.intBitsToFloat(temp);
-        strPsdBuilder.append(temp);
+        strPsdBuilder.append("Humidity : ").append(temp);
         mEventListener.onHumidityChanged(strPsdBuilder.toString());
 
     }
@@ -318,7 +333,7 @@ public class RobotController {
         StringBuilder strPsdBuilder = new StringBuilder();
 
         batteryPercent = byte4ToInt(packetParseBuffer.data);
-        strPsdBuilder.append(batteryPercent).append("%");
+        strPsdBuilder.append("Remain Battery : ").append(batteryPercent).append("%");
         mEventListener.onBatteryPercentChanged(strPsdBuilder.toString());
     }
 
@@ -330,11 +345,11 @@ public class RobotController {
         chargingStatus = byte4ToInt(packetParseBuffer.data);
         switch (chargingStatus) {
             case 0:
-                strPsdBuilder.append("No Charging");
+                strPsdBuilder.append("Not detected");
                 break;
 
             case 1:
-                strPsdBuilder.append("Charging");
+                strPsdBuilder.append("Charging Detected");
                 break;
 
             default:
@@ -665,7 +680,7 @@ public class RobotController {
     }
 
     public boolean stop() {
-        driveWheel(0, 0);
+        driveWheel(0, 0, ONE_SECOND);
         return true;
     }
 
@@ -749,19 +764,19 @@ public class RobotController {
     }
 
     public void turnLeft() {
-        turnLeft(55);
+        turnLeft(30);
     }
 
     public void turnRight() {
-        turnRight(45);
+        turnRight(30);
     }
     public void goForward(int rpm) {
         // 나중에 쓸 예정
-        driveWheel(rpm, 0);
+        driveWheel(rpm, 0, ONE_SECOND);
     }
 
     public void goBackward(int rpm) {
-        driveWheel(-rpm, 0);
+        driveWheel(-rpm, 0, ONE_SECOND);
     }
 
 //    public void stop() {
@@ -770,51 +785,54 @@ public class RobotController {
 //    }
 
     public void turnLeft(int speedInRPM) {
-        driveWheel(0, speedInRPM);
+        driveWheel(0, speedInRPM, ONE_SECOND);
     }
     public void turnRight(int speedInRPM) {
-        driveWheel(0, -speedInRPM);
+        driveWheel(0, -speedInRPM, ONE_SECOND);
     }
 
-    public void driveWheel(int linearComponent, int angularComponent) {
+    /**
+     * Changed by smLee on 2015-03-21.
+     *
+     * Description : Send Motor Move Command to Robot using bluetooth socket
+     * @param linearComponent : linear velocity, cm/s
+     * @param angularComponent : angular velocity, degree/s
+     * @param operationTime : motor operation duration, 0.1 second resolution, 0 ~ 60000,
+     *                           6000second max
+     */
+    public void driveWheel(int linearComponent, int angularComponent, int operationTime) {
         if(BluetoothManager.INSTANCE == null)
             return;
 
-        setOperationMode(OperationMode.MOVE);
-        byte[] datas = new byte[9];
+        // linearComponent limit
+        if(linearComponent > 30) linearComponent = 30;
+        else if(linearComponent < -30) linearComponent = -30;
 
+        if(angularComponent > 90) angularComponent = 90;
+        else if(angularComponent < -90) angularComponent = -90;
+
+        if(operationTime > 60000) operationTime = 60000;
+        else if(operationTime < 0)
+            return;
+//        setOperationMode(OperationMode.MOVE);
+        byte[] datas = new byte[9];
 
 		/* Set left wheel target velocity */
         datas[0] = (byte) 0x55; // pre-amble HIGH
         datas[1] = (byte) 0x54; // pre-amble LOW
         datas[2] = (byte) 0x55; // main id
         datas[3] = (byte) 0xA2; // write 0x80
-        // type 0x22 ( target velocity )
+        // type 0        x22 ( target velocity )
         datas[4] = (byte) 0x00; // sub id ( left wheel )
 
         // data
         datas[5] = (byte) (linearComponent);
-        datas[6] = (byte) (linearComponent >> 8);
-        datas[7] = (byte) (linearComponent >> 16);
-        datas[8] = (byte) (linearComponent >> 24);
+        datas[6] = (byte) (angularComponent);
+        datas[7] = (byte) (operationTime);
+        datas[8] = (byte) (operationTime >> 8);
 
         BluetoothManager.INSTANCE.sendCommand(datas);
 
-			/* Set right wheel target velocity */
-        datas[0] = (byte) 0x55; // pre-amble HIGH
-        datas[1] = (byte) 0x54; // pre-amble LOW
-        datas[2] = (byte) 0x55; // main id
-        datas[3] = (byte) 0xA2; // write 0x80
-        // type 0x22 ( target velocity )
-        datas[4] = (byte) 0x01; // sub id ( right wheel )
-
-        // data
-        datas[5] = (byte) (angularComponent);
-        datas[6] = (byte) (angularComponent >> 8);
-        datas[7] = (byte) (angularComponent >> 16);
-        datas[8] = (byte) (angularComponent >> 24);
-
-        BluetoothManager.INSTANCE.sendCommand(datas);
     }
 
     // 로봇 에서 바라볼 때 10시빙향이 1번 이고,  3개씩이 한 세트  78ㄱ개 있음 24새
