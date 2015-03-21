@@ -1,22 +1,19 @@
 package com.futurerobot.furohomesdk;
 
-import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
-import android.speech.tts.TextToSpeech;
-import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
+import android.support.v7.app.ActionBarActivity;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import com.futurerobot.furohomelib.BluetoothManager;
 import com.futurerobot.furohomelib.RobotController;
@@ -27,9 +24,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 
 
 public class MainActivity extends ActionBarActivity {
@@ -243,6 +237,14 @@ public class MainActivity extends ActionBarActivity {
     }
 
     void connectRobot() {
+
+        if(RobotController.INSTANCE.isConnected() == true) {
+            RobotController.INSTANCE.setPairedRobot(this, "", "");
+            buttonConnect.setText("Connect" );
+            RobotController.INSTANCE.disconnectRobot();
+            return;
+        }
+
         RobotController.INSTANCE.connectRobot(this, new RobotController.onRobotConnectResult() {
             @Override
             public void onResult(String errorString) {
@@ -250,7 +252,7 @@ public class MainActivity extends ActionBarActivity {
                     showAlert("Error", errorString);
                 } else {
 //                    buttonConnectFuro.setText("Connected");
-                    buttonConnect.setText("Connected " );
+                    buttonConnect.setText("Disconnected" );
                 }
             }
         });
