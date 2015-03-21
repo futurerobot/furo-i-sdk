@@ -257,7 +257,7 @@ public class MainActivity extends ActionBarActivity {
                     showAlert("Error", errorString);
                 } else {
 //                    buttonConnectFuro.setText("Connected");
-                    buttonConnect.setText("Disconnected" );
+                    buttonConnect.setText("Disconnect" );
                 }
             }
         });
